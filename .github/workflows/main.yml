@@ -1,0 +1,29 @@
+name: Build Docker image
+on:
+  push:
+    branches:
+      - main
+
+env:
+  build_id: ${GITHUB_RUN_ID}-${GITHUB_RUN_NUMBER}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build and tag image
+        run: docker build -t ${{ github.repository }}:${{env.build_id }}  .
+
+      - name: Retag the image
+        run: docker tag ${{ github.repository }}:${{env.build_id }} ${{ secrets.HARBOR_REGISTRY_URL }}/nodejs-build/${{ github.repository }}:${{env.build_id }}
+
+      - name: Log in to Harbor
+        run: |
+              echo ${{ secrets.DOCKERHUB_PASSWORD }} | docker login  ${{ secrets.HARBOR_REGISTRY_URL }} -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Push image to Harbor
+        run: docker push ${{ secrets.HARBOR_REGISTRY_URL }}/nodejs-build/${{ github.repository }}:${{env.build_id }}
